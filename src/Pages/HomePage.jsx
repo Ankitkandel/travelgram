@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import ButtonComponent from "../Components/ButtonComponent";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const HomePage = () => {
     const [data, setData] = useState([]);
@@ -18,6 +18,7 @@ const HomePage = () => {
           const result = await response.json();
           const apiData = result.map((item) => {
             return {
+              id: item.id,
               title: atob(item.title.$content),
               user: atob(item.userName.$content),
               location: atob(item.location.$content),
@@ -58,6 +59,7 @@ const HomePage = () => {
                   ))
               : data.map((item, index) => (
                   <div key={index} className="mb-4 relative group">
+                    <Link to={`/update/${item.id}`}>
                     <img
                       src={"https://blobstoragetravelgram.blob.core.windows.net" + item.filePath}
                       alt=""
@@ -101,6 +103,7 @@ const HomePage = () => {
                         </p>
                       </div>
                     </div>
+                    </Link>
                   </div>
                 ))}
           </div>

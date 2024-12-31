@@ -1,9 +1,11 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { ClipLoader } from "react-spinners";
+import homeLogo from "/public/home-logo.png";
 
-const UploadPage = () => {
+const UpdatePage = ( ) => {
+  const {id} = useParams();
   const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState(null);
   const [formData, setFormData] = useState({
@@ -11,19 +13,10 @@ const UploadPage = () => {
     title: "",
     location: "",
     description: "",
+    id: ""
   });
-  const [loading, setLoading] = useState(false);
-
-  const handleImageChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(file);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+  const [loading, setLoading] = useState(true);
+  const [loadingDelete, setLoadingDelete] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -41,14 +34,15 @@ const UploadPage = () => {
     data.append("title", formData.title);
     data.append("location", formData.location);
     data.append("description", formData.description);
+    data.append("id", formData.id);
     if (selectedImage) {
-      data.append("File", selectedImage);
+      data.append("filePath", selectedImage);
     }
 
     const config = {
-      method: "post",
+      method: "put",
       maxBodyLength: Infinity,
-      url: "https://prod-20.northcentralus.logic.azure.com:443/workflows/8a71e54788ed458a820fa0f78ef0057e/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=2dDhi-h6KCL_Htpu2L32KXAY3T5LMo4TJyZY5m7yWIE",
+      url: "https://prod-16.northcentralus.logic.azure.com:443/workflows/9f01d456cfef402e8a4096c11173cea1/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=QxSiYJQ-BXPue_dj9zQ2MtG7QCucdxgQQ0XbsxnX_jQ",
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -66,6 +60,72 @@ const UploadPage = () => {
     }
   };
 
+  const handleDelete = async (event) => {
+    event.preventDefault();
+    setLoadingDelete(true);
+
+    const config = {
+      method: "delete",
+      maxBodyLength: Infinity,
+      url: "https://prod-04.northcentralus.logic.azure.com:443/workflows/d738535164fa4d6abcbfe11e43173a74/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=QAWS5JKEUJkzINskwerwBa2DlR2iXcOHCxxWLkdv3Gk",
+      // query params
+        params: {
+            id: formData.id,
+            filePath: selectedImage
+        },
+    };
+
+    try {
+      const response = await axios.request(config);
+      // console.log(JSON.stringify(response.data));
+      navigate("/");
+    } catch (error) {
+      // console.log(error);
+    } finally {
+      setLoadingDelete(false);
+    }
+  };
+
+
+    useEffect(() => {
+
+        if (id) {
+      const fetchData = async () => {
+        try {
+          const response = await fetch(
+            "https://prod-29.northcentralus.logic.azure.com:443/workflows/2d74d9d9ec2e41dda2723fbefae71850/triggers/When_a_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_a_HTTP_request_is_received%2Frun&sv=1.0&sig=j1gQ_YW2lFzfBEfpuLRG8RrIc0IDv8mVaFEbpxuZleU"
+          );
+          const result = await response.json();
+          const apiData = result.filter((item)=>item.id === id).map((item) => {
+            return {
+              id: item.id,
+              title: atob(item.title.$content),
+              user: atob(item.userName.$content),
+              location: atob(item.location.$content),
+              filePath: item.filePath,
+              description: atob(item.description.$content)
+            };
+          });
+
+          setSelectedImage(apiData[0].filePath);
+          setFormData({
+            id: apiData[0].id,
+            username: apiData[0].user,
+            title: apiData[0].title,
+            location: apiData[0].location,
+            description: apiData[0].description,
+          });
+
+        } catch (error) {
+          // console.error("Error fetching data:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }
+    }, [id]);
+
   return (
     <div className="w-[100vw] h-[100vh] flex flex-col bg-primary-100">
       <div className="flex w-[90vw] justify-between mx-auto my-8">
@@ -73,7 +133,7 @@ const UploadPage = () => {
           travelgram.
         </h1>
         <Link to="/">
-          <img src="./home-logo.png" alt="Home" />
+          <img src={homeLogo} alt="Home" />
         </Link>
       </div>
 
@@ -119,7 +179,7 @@ const UploadPage = () => {
 
               <div className="relative w-full border-2 border-primary-100 flex flex-col items-center justify-center rounded-xl bg-white hover:bg-primary-25">
                 {selectedImage ? (
-                  <img src={URL.createObjectURL(selectedImage)} alt="Selected" className="rounded-xl" />
+                  <img src={"https://blobstoragetravelgram.blob.core.windows.net" + selectedImage} alt="Selected" className="rounded-xl" />
                 ) : (
                   <>
                     <img src="upload-image-logo.png" alt="" />
@@ -128,12 +188,6 @@ const UploadPage = () => {
                     </p>
                   </>
                 )}
-                <input
-                  type="file"
-                  onChange={handleImageChange}
-                  className="absolute opacity-0 cursor-pointer w-full h-full"
-                  required
-                />
               </div>
             </div>
 
@@ -155,7 +209,22 @@ const UploadPage = () => {
                 <ClipLoader color={"#ffffff"} loading={loading} size={24} />
               ) : (
                 <p className="text-primary-100 text-xl font-bold uppercase tracking-widest group-hover:text-white">
-                  Submit
+                  Update
+                </p>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="group px-4 py-2 border-2 border-primary-100 rounded-2xl transition-all duration-500 ease-in-out hover:bg-primary-100"
+              disabled={loadingDelete}
+            >
+              {loadingDelete ? (
+                <ClipLoader color={"#ffffff"} loading={loadingDelete} size={24} />
+              ) : (
+                <p className="text-primary-100 text-xl font-bold uppercase tracking-widest group-hover:text-white">
+                  Delete
                 </p>
               )}
             </button>
@@ -168,4 +237,4 @@ const UploadPage = () => {
 
 
 
-export default UploadPage;
+export default UpdatePage;
